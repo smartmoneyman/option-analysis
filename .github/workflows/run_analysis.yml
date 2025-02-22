@@ -23,10 +23,10 @@ jobs:
       - name: Debug Secrets
         run: |
           if [ -z "${{ secrets.GDRIVE_CREDENTIALS }}" ]; then
-            echo "❌ GDRIVE_CREDENTIALS не передается в GitHub Secrets"
-            exit 1
+          echo "❌ GDRIVE_CREDENTIALS не передается в GitHub Secrets"
+          exit 1
           else
-            echo "✅ GDRIVE_CREDENTIALS найден (размер: $(echo '${{ secrets.GDRIVE_CREDENTIALS }}' | wc -c) байт)"
+          echo "✅ GDRIVE_CREDENTIALS найден (размер: $(echo '${{ secrets.GDRIVE_CREDENTIALS }}' | wc -c) байт)"
           fi
 
       - name: Set up Google Drive credentials
