@@ -35,6 +35,6 @@ jobs:
       - name: Run script
         run: python process_options.py
 
-git filter-branch --force --index-filter \
-"git rm --cached --ignore-unmatch stockanalysisdrive-e5f197bdd932.json" \
---prune-empty --tag-name-filter cat -- --all
+      git filter-branch --force --index-filter \
+      "git rm --cached --ignore-unmatch stockanalysisdrive-e5f197bdd932.json" \
+      --prune-empty --tag-name-filter cat -- --all
