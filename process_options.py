@@ -5,42 +5,55 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import telebot
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
+import io
 
-# === 1. Настройки ===
-GOOGLE_DRIVE_FOLDER_NAME = "Опционы"
+# === Параметры ===
+FOLDER_ID = "1J1W5nmnTJWzgruO-zccypP4IddD_JjTU"  # ID папки в Google Drive
 INPUT_FILE_NAME = "options_data.csv"
 OUTPUT_FILE_NAME = "processed_options.csv"
-TELEGRAM_BOT_TOKEN = "your_telegram_bot_token"
-TELEGRAM_CHAT_ID = "your_chat_id"
 
-# === 2. Подключение к Google Drive ===
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+# Telegram Bot
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+# === 1. Подключение к Google Drive ===
+SCOPES = ['https://www.googleapis.com/auth/drive']
 creds_json = os.getenv("GDRIVE_CREDENTIALS")
 
 if creds_json:
     creds_dict = json.loads(creds_json)
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     gc = gspread.authorize(creds)
+    drive_service = build('drive', 'v3', credentials=creds)
 else:
     print("Ошибка: GDRIVE_CREDENTIALS не найден в переменных окружения.")
     exit()
 
-# === 3. Поиск файла в Google Drive ===
-drive_files = gc.list_spreadsheet_files()
-file_id = None
-for file in drive_files:
-    if file['name'] == INPUT_FILE_NAME:
-        file_id = file['id']
-        break
+# === 2. Поиск файла в Google Drive ===
+query = f"name='{INPUT_FILE_NAME}' and '{FOLDER_ID}' in parents"
+response = drive_service.files().list(q=query, fields="files(id, name)").execute()
+files = response.get('files', [])
 
-if not file_id:
+if not files:
     print("Файл не найден в Google Drive.")
     exit()
 
-# === 4. Скачивание и обработка файла ===
-df = pd.read_csv(f"https://drive.google.com/uc?export=download&id={file_id}")
+file_id = files[0]['id']
 
-# Приведение данных к нужному формату
+# === 3. Скачивание файла ===
+request = drive_service.files().get_media(fileId=file_id)
+file_stream = io.BytesIO()
+downloader = MediaIoBaseDownload(file_stream, request)
+done = False
+while not done:
+    _, done = downloader.next_chunk()
+
+file_stream.seek(0)
+df = pd.read_csv(file_stream)
+
+# === 4. Обработка данных ===
 df['IV'] = df['IV'].str.replace('%', '').str.replace(',', '').astype(float)
 df[['Bid', 'Ask', 'Last', 'Volume', 'Open Int']] = df[['Bid', 'Ask', 'Last', 'Volume', 'Open Int']].astype(float)
 df['Strike'] = pd.to_numeric(df['Strike'], errors='coerce')
@@ -71,13 +84,20 @@ filtered_data = option_analysis[
     (option_analysis['total_volume'] >= 1000) & (option_analysis['delta_volume_diff'] > 0)
 ]
 
-# === 5. Сохранение файла в Google Drive ===
-output_path = f"/content/drive/My Drive/{GOOGLE_DRIVE_FOLDER_NAME}/{OUTPUT_FILE_NAME}"
-filtered_data.to_csv(output_path, index=False)
-print(f"Файл сохранен в Google Drive: {output_path}")
+# === 5. Сохранение обработанного файла ===
+output_file_path = f"/tmp/{OUTPUT_FILE_NAME}"
+filtered_data.to_csv(output_file_path, index=False)
 
-# === 6. Отправка файла в Telegram ===
+# === 6. Загрузка файла обратно в Google Drive ===
+file_metadata = {
+    "name": OUTPUT_FILE_NAME,
+    "parents": [FOLDER_ID]
+}
+media = drive_service.files().create(body=file_metadata, media_body=output_file_path, fields="id").execute()
+print(f"Файл загружен в Google Drive: {media.get('id')}")
+
+# === 7. Отправка файла в Telegram ===
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
-with open(output_path, "rb") as doc:
+with open(output_file_path, "rb") as doc:
     bot.send_document(TELEGRAM_CHAT_ID, doc, caption="Обработанный файл с опционами")
 print("Файл отправлен в Telegram.")
