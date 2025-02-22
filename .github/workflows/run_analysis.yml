@@ -21,7 +21,7 @@ jobs:
         run: pip install pandas gspread google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client pyTelegramBotAPI
 
       - name: Set up Google Drive credentials
-        run: echo '${{ secrets.GDRIVE_CREDENTIALS }}' > service_account.json
+        run: echo '${{ secrets.GDRIVE_CREDENTIALS }}' | base64 --decode > service_account.json
 
       - name: Run script
         run: python process_options.py
