@@ -24,3 +24,5 @@ jobs:
 
       - name: Run script
         run: python process_options.py
+      - name: Install dependencies
+        run: pip install gspread google-auth pandas
