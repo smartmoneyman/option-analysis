@@ -20,13 +20,10 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install pandas
+        run: pip install pandas gspread google-auth
+
+      - name: Set up Google Drive credentials
+        run: echo '${{ secrets.GDRIVE_CREDENTIALS }}' > service_account.json
 
       - name: Run script
         run: python process_options.py
-        
-      - name: Install dependencies
-        run: pip install gspread google-auth pandas
-        
-      - name: Set up Google Drive credentials
-        run: echo '${{ secrets.GDRIVE_CREDENTIALS }}' > service_account.json
