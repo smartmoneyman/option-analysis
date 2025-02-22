@@ -6,6 +6,7 @@ on:
       - main
   schedule:
     - cron: "0 12 * * *"  # Запуск каждый день в 12:00 UTC
+  workflow_dispatch:  # Добавляет кнопку "Run workflow" в GitHub Actions
 
 jobs:
   run-script:
