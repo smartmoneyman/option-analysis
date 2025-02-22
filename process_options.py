@@ -9,6 +9,14 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import io
 
+creds_json = os.getenv("GDRIVE_CREDENTIALS")
+
+if creds_json:
+    print("✅ Найден GDRIVE_CREDENTIALS в переменных окружения")
+else:
+    print("❌ Ошибка: GDRIVE_CREDENTIALS не найден")
+    exit(1)
+
 # === Параметры ===
 FOLDER_ID = "1J1W5nmnTJWzgruO-zccypP4IddD_JjTU"  # ID папки в Google Drive
 INPUT_FILE_NAME = "options_data.csv"
