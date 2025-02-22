@@ -18,7 +18,7 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-  run: pip install pandas gspread google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client pyTelegramBotAPI
+        run: pip install pandas gspread google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client pyTelegramBotAPI
 
       - name: Set up Google Drive credentials
         run: echo '${{ secrets.GDRIVE_CREDENTIALS }}' > service_account.json
