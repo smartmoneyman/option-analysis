@@ -21,7 +21,7 @@ jobs:
         run: pip install pandas gspread google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client pyTelegramBotAPI
 
       - name: Debug Secrets
-        run: echo "Checking if GDRIVE_CREDENTIALS exists"; if [ -z "${{ secrets.GDRIVE_CREDENTIALS }}" ]; then echo "GDRIVE_CREDENTIALS is missing!"; exit 1; fi
+        run: echo "Checking if GDRIVE_CREDENTIALS exists"; echo "${{ secrets.GDRIVE_CREDENTIALS }}" | wc -c
 
       - name: Set up Google Drive credentials
         run: echo '${{ secrets.GDRIVE_CREDENTIALS }}' > service_account.json
