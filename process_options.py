@@ -107,3 +107,22 @@ if not option_analysis.empty:
 else:
     print("⚠️ Нет данных для обработки.")
 
+# === 8. Загрузка обработанного файла в Google Drive ===
+try:
+    file_metadata = {
+        "name": OUTPUT_FILE_NAME,
+        "parents": [FOLDER_ID]  # Загружаем в ту же папку
+    }
+    media = MediaFileUpload(output_file_path, mimetype="text/csv")
+    uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    print(f"✅ Файл загружен в Google Drive: {uploaded_file.get('id')}")
+except Exception as e:
+    print(f"❌ Ошибка при загрузке файла в Google Drive: {e}")
+
+# === 9. Отправка файла в Telegram ===
+try:
+    with open(output_file_path, "rb") as doc:
+        bot.send_document(TELEGRAM_CHAT_ID, doc, caption="📊 Обработанный файл с опционами")
+    print("✅ Файл отправлен в Telegram.")
+except Exception as e:
+    print(f"❌ Ошибка при отправке файла в Telegram: {e}")
