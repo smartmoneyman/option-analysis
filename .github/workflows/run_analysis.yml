@@ -20,10 +20,11 @@ jobs:
       - name: Install dependencies
         run: pip install pandas gspread google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client pyTelegramBotAPI
 
-      - name: Debug Environment Variables
-        run: env | sort  # Выведет все переменные окружения
+      - name: Decrypt service_account.json
+        run: openssl aes-256-cbc -d -pbkdf2 -in service_account.json.enc -out service_account.json -k "${{ secrets.DECRYPT_PASSWORD }}"
+
+      - name: Check if service_account.json exists
+        run: ls -l service_account.json || echo "❌ service_account.json НЕ НАЙДЕН!"
 
       - name: Run script
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: python process_options.py
