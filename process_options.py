@@ -36,12 +36,12 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # === 2. Поиск файла в Google Drive ===
 try:
-    query = f"name = '{INPUT_FILE_NAME}' and parents in ['{FOLDER_ID}']"
+    query = f"name = '{INPUT_FILE_NAME}' and '{FOLDER_ID}' in parents"
     response = drive_service.files().list(q=query, fields="files(id, name)").execute()
     files = response.get('files', [])
 
     if not files:
-        print("❌ Файл не найден в Google Drive.")
+        print(f"❌ Файл '{INPUT_FILE_NAME}' не найден в Google Drive в папке {FOLDER_ID}.")
         exit()
 
     file_id = files[0]['id']
