@@ -1,3 +1,10 @@
+name: Run Option Analysis
+
+on:
+  schedule:
+    - cron: "0 12 * * *"  # Запуск каждый день в 12:00 UTC
+  workflow_dispatch:  # Оставляем только ручной запуск
+
 jobs:
   run-script:
     runs-on: ubuntu-latest
