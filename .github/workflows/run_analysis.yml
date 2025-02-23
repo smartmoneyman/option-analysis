@@ -5,6 +5,10 @@ on:
     - cron: "0 12 * * *"  # Запуск каждый день в 12:00 UTC
   workflow_dispatch:  # Оставляем только ручной запуск
 
+  - name: Decrypt service_account.json
+  run: openssl aes-256-cbc -d -pbkdf2 -in service_account.json.enc -out service_account.json -k "${{ secrets.DECRYPT_PASSWORD }}"
+
+
 jobs:
   run-script:
     runs-on: ubuntu-latest
