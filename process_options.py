@@ -34,17 +34,22 @@ OUTPUT_FILE_NAME = "processed_options.csv"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# === 4. Поиск файла в Google Drive ===
-query = f"name='{INPUT_FILE_NAME}' and parents in ['{FOLDER_ID}']"
-response = drive_service.files().list(q=query, fields="files(id, name)").execute()
-files = response.get('files', [])
+# === 2. Поиск файла в Google Drive ===
+try:
+    query = f"name = '{INPUT_FILE_NAME}' and parents in ['{FOLDER_ID}']"
+    response = drive_service.files().list(q=query, fields="files(id, name)").execute()
+    files = response.get('files', [])
 
-if not files:
-    print("❌ Файл не найден в Google Drive.")
+    if not files:
+        print("❌ Файл не найден в Google Drive.")
+        exit()
+
+    file_id = files[0]['id']
+    print(f"✅ Найден файл в Google Drive: {file_id}")
+
+except Exception as e:
+    print(f"❌ Ошибка при поиске файла в Google Drive: {e}")
     exit()
-
-file_id = files[0]['id']
-print(f"✅ Найден файл в Google Drive: {file_id}")
 
 # === 5. Скачивание файла ===
 request = drive_service.files().get_media(fileId=file_id)
