@@ -99,8 +99,11 @@ option_analysis['Strike_Price_Diff'] = (option_analysis['Strike'] - option_analy
 option_analysis['Strike_Price_Diff_%'] = ((option_analysis['Strike_Price_Diff'] / option_analysis['Price~']) * 100).round(2)
 
 # === 7. Сохранение и отправка данных ===
+output_file_path = "/tmp/processed_options.csv"  # Добавляем путь к файлу
+
 if not option_analysis.empty:
     option_analysis.to_csv(output_file_path, index=False)
-    print("✅ Файл обработан и сохранен.")
+    print(f"✅ Файл обработан и сохранен: {output_file_path}")
 else:
     print("⚠️ Нет данных для обработки.")
+
