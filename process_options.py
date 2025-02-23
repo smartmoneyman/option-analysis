@@ -46,20 +46,20 @@ print("✅ Telegram Bot успешно инициализирован")
 
 # === 4. Поиск файла в Google Drive ===
 try:
-    query = f"name = '{INPUT_FILE_NAME}' and parents in ['{FOLDER_ID}']"
+    query = f"name='{INPUT_FILE_NAME}' and parents='{FOLDER_ID}'"
     response = drive_service.files().list(q=query, fields="files(id, name)").execute()
     files = response.get('files', [])
 
     if not files:
         print(f"❌ Файл '{INPUT_FILE_NAME}' не найден в Google Drive в папке {FOLDER_ID}.")
-        exit()
+        exit(1)
 
     file_id = files[0]['id']
     print(f"✅ Найден файл в Google Drive: {file_id}")
 
 except Exception as e:
     print(f"❌ Ошибка при поиске файла в Google Drive: {e}")
-    exit()
+    exit(1)
 
 # === 5. Скачивание файла ===
 request = drive_service.files().get_media(fileId=file_id)
