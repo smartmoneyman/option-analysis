@@ -34,9 +34,19 @@ OUTPUT_FILE_NAME = "processed_options.csv"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# === 2. Поиск файла в Google Drive ===
+if not TELEGRAM_BOT_TOKEN:
+    print("❌ Ошибка: TELEGRAM_BOT_TOKEN не найден в переменных окружения!")
+    exit(1)
+if not TELEGRAM_CHAT_ID:
+    print("❌ Ошибка: TELEGRAM_CHAT_ID не найден в переменных окружения!")
+    exit(1)
+
+bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
+print("✅ Telegram Bot успешно инициализирован")
+
+# === 4. Поиск файла в Google Drive ===
 try:
-    query = f"name = '{INPUT_FILE_NAME}' and '{FOLDER_ID}' in parents"
+    query = f"name = '{INPUT_FILE_NAME}' and parents in ['{FOLDER_ID}']"
     response = drive_service.files().list(q=query, fields="files(id, name)").execute()
     files = response.get('files', [])
 
@@ -86,28 +96,11 @@ option_analysis = df.groupby(['Symbol', 'Price~', 'Type', 'Strike', 'Exp Date'])
 option_analysis['delta_volume_diff'] = option_analysis['positive_delta_volume'] - option_analysis['negative_delta_volume']
 option_analysis['Days_to_Expiration'] = (option_analysis['Exp Date'] - datetime.today()).dt.days
 option_analysis['Strike_Price_Diff'] = (option_analysis['Strike'] - option_analysis['Price~']).round(2)
-option_analysis['Strike_Price_Diff_%'] = ((option_analysis['Strike_Price_Diff'] / df['Price~']) * 100).round(2)
+option_analysis['Strike_Price_Diff_%'] = ((option_analysis['Strike_Price_Diff'] / option_analysis['Price~']) * 100).round(2)
 
-# Фильтрация по объему и дельте
-filtered_data = option_analysis[
-    (option_analysis['total_volume'] >= 1000) & (option_analysis['delta_volume_diff'] > 0)
-]
-
-# === 7. Сохранение обработанного файла ===
-output_file_path = f"/tmp/{OUTPUT_FILE_NAME}"
-filtered_data.to_csv(output_file_path, index=False)
-
-# === 8. Загрузка файла обратно в Google Drive ===
-file_metadata = {
-    "name": OUTPUT_FILE_NAME,
-    "parents": [FOLDER_ID]
-}
-media = MediaFileUpload(output_file_path, mimetype="text/csv")
-uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-print(f"✅ Файл загружен в Google Drive: {uploaded_file.get('id')}")
-
-# === 9. Отправка файла в Telegram ===
-bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
-with open(output_file_path, "rb") as doc:
-    bot.send_document(TELEGRAM_CHAT_ID, doc, caption="Обработанный файл с опционами")
-print("✅ Файл отправлен в Telegram.")
+# === 7. Сохранение и отправка данных ===
+if not option_analysis.empty:
+    option_analysis.to_csv(output_file_path, index=False)
+    print("✅ Файл обработан и сохранен.")
+else:
+    print("⚠️ Нет данных для обработки.")
