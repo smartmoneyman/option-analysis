@@ -5,10 +5,6 @@ on:
     - cron: "0 12 * * *"  # Запуск каждый день в 12:00 UTC
   workflow_dispatch:  # Оставляем только ручной запуск
 
-  - name: Decrypt service_account.json
-  run: openssl aes-256-cbc -d -pbkdf2 -in service_account.json.enc -out service_account.json -k "${{ secrets.DECRYPT_PASSWORD }}"
-
-
 jobs:
   run-script:
     runs-on: ubuntu-latest
@@ -24,17 +20,8 @@ jobs:
       - name: Install dependencies
         run: pip install pandas gspread google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client pyTelegramBotAPI
 
-      - name: Debug Secrets
-        run: |
-          if [ -z "${{ secrets.GDRIVE_CREDENTIALS }}" ]; then
-          echo "❌ GDRIVE_CREDENTIALS не передается в GitHub Secrets"
-          exit 1
-          else
-          echo "✅ GDRIVE_CREDENTIALS найден (размер: $(echo '${{ secrets.GDRIVE_CREDENTIALS }}' | wc -c) байт)"
-          fi
-
-      - name: Set up Google Drive credentials
-        run: echo '${{ secrets.GDRIVE_CREDENTIALS }}' > service_account.json
+      - name: Decrypt service_account.json
+        run: openssl aes-256-cbc -d -pbkdf2 -in service_account.json.enc -out service_account.json -k "${{ secrets.DECRYPT_PASSWORD }}"
 
       - name: Run script
         run: python process_options.py
