@@ -27,7 +27,6 @@ drive_service = build('drive', 'v3', credentials=creds)
 
 # === 3. Параметры ===
 FOLDER_ID = "1J1W5nmnTJWzgruO-zccypP4IddD_JjTU"
-INPUT_FILE_NAME = "options_data.csv"
 OUTPUT_FILE_NAME = "processed_options.csv"
 
 # Telegram Bot
@@ -44,33 +43,50 @@ if not TELEGRAM_CHAT_ID:
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 print("✅ Telegram Bot успешно инициализирован")
 
-# === 4. Поиск файла в Google Drive ===
+# === Найти последний загруженный файл ===
 try:
-    query = f"name='{INPUT_FILE_NAME}' and parents='{FOLDER_ID}'"
-    response = drive_service.files().list(q=query, fields="files(id, name)").execute()
+    query = f"'{FOLDER_ID}' in parents"
+    response = drive_service.files().list(
+        q=query,
+        fields="files(id, name, createdTime)",
+        orderBy="createdTime desc",
+        pageSize=1
+    ).execute()
+
     files = response.get('files', [])
 
     if not files:
-        print(f"❌ Файл '{INPUT_FILE_NAME}' не найден в Google Drive в папке {FOLDER_ID}.")
+        print("❌ В папке Google Drive нет файлов!")
         exit(1)
 
-    file_id = files[0]['id']
-    print(f"✅ Найден файл в Google Drive: {file_id}")
+    latest_file = files[0]
+    file_id = latest_file['id']
+    file_name = latest_file['name']
+    print(f"✅ Найден последний загруженный файл: {file_name} (ID: {file_id})")
 
 except Exception as e:
     print(f"❌ Ошибка при поиске файла в Google Drive: {e}")
     exit(1)
 
-# === 5. Скачивание файла ===
-request = drive_service.files().get_media(fileId=file_id)
-file_stream = io.BytesIO()
-downloader = MediaIoBaseDownload(file_stream, request)
-done = False
-while not done:
-    _, done = downloader.next_chunk()
+# === Скачать файл ===
+try:
+    request = drive_service.files().get_media(fileId=file_id)
+    file_stream = io.BytesIO()
+    downloader = MediaIoBaseDownload(file_stream, request)
+    done = False
+    while not done:
+        _, done = downloader.next_chunk()
 
-file_stream.seek(0)
-df = pd.read_csv(file_stream)
+    file_stream.seek(0)  # Перемещаем указатель в начало файла
+    print(f"✅ Файл {file_name} загружен и готов к обработке.")
+
+    # === Преобразуем загруженный файл в DataFrame ===
+    df = pd.read_csv(file_stream)
+    print("✅ Файл загружен в DataFrame, начинаем обработку.")
+
+except Exception as e:
+    print(f"❌ Ошибка при скачивании файла: {e}")
+    exit(1)
 
 # === 6. Обработка данных ===
 df['IV'] = df['IV'].str.replace('%', '').str.replace(',', '').astype(float)
@@ -84,25 +100,11 @@ df['Days_to_Expiration'] = (df['Exp Date'] - datetime.today()).dt.days
 df['Strike_Price_Diff'] = (df['Strike'] - df['Price~']).round(2)
 df['Strike_Price_Diff_%'] = ((df['Strike_Price_Diff'] / df['Price~']) * 100).round(2)
 
-# Группировка
-option_analysis = df.groupby(['Symbol', 'Price~', 'Type', 'Strike', 'Exp Date']).agg(
-    total_volume=('Volume', 'sum'),
-    total_open_int=('Open Int', 'sum'),
-    positive_delta_volume=('Volume', lambda x: (df.loc[x.index, 'Volume'] * df.loc[x.index, 'Delta']).clip(lower=0).sum()),
-    negative_delta_volume=('Volume', lambda x: (-df.loc[x.index, 'Volume'] * df.loc[x.index, 'Delta']).clip(lower=0).sum()),
-).reset_index()
+# === 7. Сохранение данных ===
+output_file_path = "/tmp/processed_options.csv"
 
-# Добавление параметров
-option_analysis['delta_volume_diff'] = option_analysis['positive_delta_volume'] - option_analysis['negative_delta_volume']
-option_analysis['Days_to_Expiration'] = (option_analysis['Exp Date'] - datetime.today()).dt.days
-option_analysis['Strike_Price_Diff'] = (option_analysis['Strike'] - option_analysis['Price~']).round(2)
-option_analysis['Strike_Price_Diff_%'] = ((option_analysis['Strike_Price_Diff'] / option_analysis['Price~']) * 100).round(2)
-
-# === 7. Сохранение и отправка данных ===
-output_file_path = "/tmp/processed_options.csv"  # Добавляем путь к файлу
-
-if not option_analysis.empty:
-    option_analysis.to_csv(output_file_path, index=False)
+if not df.empty:
+    df.to_csv(output_file_path, index=False)
     print(f"✅ Файл обработан и сохранен: {output_file_path}")
 else:
     print("⚠️ Нет данных для обработки.")
@@ -111,11 +113,16 @@ else:
 try:
     file_metadata = {
         "name": OUTPUT_FILE_NAME,
-        "parents": [FOLDER_ID]  # Загружаем в ту же папку
+        "parents": [FOLDER_ID]
     }
     media = MediaFileUpload(output_file_path, mimetype="text/csv")
     uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-    print(f"✅ Файл загружен в Google Drive: {uploaded_file.get('id')}")
+
+    if uploaded_file and "id" in uploaded_file:
+        print(f"✅ Файл загружен в Google Drive: {uploaded_file.get('id')}")
+    else:
+        print("❌ Ошибка: Файл не загружен в Google Drive.")
+
 except Exception as e:
     print(f"❌ Ошибка при загрузке файла в Google Drive: {e}")
 
