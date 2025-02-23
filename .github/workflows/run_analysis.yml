@@ -3,7 +3,7 @@ name: Run Option Analysis
 on:
   schedule:
     - cron: "0 12 * * *"  # Запуск каждый день в 12:00 UTC
-  workflow_dispatch:  # Оставляем только ручной запуск
+  workflow_dispatch:  # Ручной запуск
 
 jobs:
   run-script:
@@ -27,4 +27,6 @@ jobs:
         run: ls -l service_account.json || echo "❌ service_account.json НЕ НАЙДЕН!"
 
       - name: Run script
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: python process_options.py
