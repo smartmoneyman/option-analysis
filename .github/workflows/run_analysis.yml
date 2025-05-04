@@ -2,7 +2,7 @@ name: Run Option Analysis
 
 on:
   schedule:
-    - cron: "0 12 * * *"  # Запуск каждый день в 12:00 UTC
+ #   - cron: "0 12 * * *"  # Запуск каждый день в 12:00 UTC
   workflow_dispatch:  # Ручной запуск
 
 jobs:
